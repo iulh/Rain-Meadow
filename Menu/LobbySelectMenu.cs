@@ -41,14 +41,26 @@ namespace RainMeadow
 
             this.backTarget = ProcessManager.ProcessID.MainMenu;
 
-            lobbyList = new LobbyCardsList(this, mainPage, new Vector2(518, 100f), new Vector2(330f, 490f));
-            lobbyList.RefreshButton.OnClick += RefreshLobbyList;
-            mainPage.subObjects.Add(lobbyList);
-
             // title at the top
             this.scene.AddIllustration(new MenuIllustration(this, this.scene, "illustrations/rainmeadowtitle", Utils.GetMeadowTitleFileName(true), new Vector2(-2.99f, 265.01f), true, false));
             this.scene.AddIllustration(new MenuIllustration(this, this.scene, "illustrations/rainmeadowtitle", Utils.GetMeadowTitleFileName(false), new Vector2(-2.99f, 265.01f), true, false));
             this.scene.flatIllustrations[this.scene.flatIllustrations.Count - 1].sprite.shader = this.manager.rainWorld.Shaders["MenuText"];
+
+            // // Lobby machine go!
+            MatchmakingManager.OnLobbyListReceived += OnlineManager_OnLobbyListReceived;
+            MatchmakingManager.OnLobbyJoined += OnlineManager_OnLobbyJoined;
+            if (MatchmakingManager.supported_matchmakers.Contains(MatchmakingManager.MatchMakingDomain.Steam))
+            {
+                SteamNetworkingUtils.InitRelayNetworkAccess();
+            }
+        }
+        public override void Init()
+        {
+            base.Init();
+
+            lobbyList = new LobbyCardsList(this, mainPage, new Vector2(518, 100f), new Vector2(330f, 490f));
+            lobbyList.RefreshButton.OnClick += RefreshLobbyList;
+            mainPage.subObjects.Add(lobbyList);
 
             creditsButton = new SimplerButton(this, mainPage, Translate("Credits"), new Vector2(1056f, 600f), new Vector2(110f, 30f));
             creditsButton.OnClick += (_) =>
@@ -58,7 +70,6 @@ namespace RainMeadow
             };
             mainPage.subObjects.Add(creditsButton);
 
-
             createButton = new SimplerButton(this, mainPage, Translate("CREATE!"), new Vector2(1056f, 50f), new Vector2(110f, 30f));
             createButton.OnClick += (_) =>
             {
@@ -67,40 +78,17 @@ namespace RainMeadow
             };
             mainPage.subObjects.Add(createButton);
 
-            // // refresh button on lower left // P.S. I know we will probably re-align it later, I could not find an exact position that would satisfy my OCD, which usually means the alignment sucks.
-            // refreshButton = new SimplerButton(this, mainPage, "REFRESH", new Vector2(315f, 50f), new Vector2(110f, 30f));
-            // refreshButton.OnClick += RefreshLobbyList;
-            // mainPage.subObjects.Add(refreshButton);
-
-            // // 188 on mock -> 218 -> 768 - 218 = 550 -> 552
-            // // misc buttons on topright
-            // // currently greyed out since they server no purpose
-            // Vector2 where = new Vector2(1056f, 552f);
-            // var aboutButton = new SimplerButton(this, mainPage, Translate("ABOUT"), where, new Vector2(110f, 30f));
-            // aboutButton.buttonBehav.greyedOut = true;
-
-            // mainPage.subObjects.Add(aboutButton);
-            // where.y -= 35;
-            // var statsButton = new SimplerButton(this, mainPage, Translate("STATS"), where, new Vector2(110f, 30f));
-            // statsButton.buttonBehav.greyedOut = true;
-            // mainPage.subObjects.Add(statsButton);
-            // where.y -= 35;
-            // var unlocksButton = new SimplerButton(this, mainPage, Translate("UNLOCKS"), where, new Vector2(110f, 30f));
-            // unlocksButton.buttonBehav.greyedOut = true;
-            // mainPage.subObjects.Add(unlocksButton);
-
-            // Status
+            #region mod info
             statisticsLabel = new MenuLabel(this, pages[0], $"{Translate("Online:")} {playerCount} | {Translate("Lobbies:")} {lobbyCount}", new Vector2((1336f - manager.rainWorld.screenSize.x) / 2f + 20f, manager.rainWorld.screenSize.y - 768f + 20), new Vector2(200f, 20f), false, null);
             statisticsLabel.size = new Vector2(statisticsLabel.label.textRect.width, statisticsLabel.size.y);
             mainPage.subObjects.Add(statisticsLabel);
 
-            // // display version
             MenuLabel versionLabel = new(this, pages[0], $"{Translate("Rain Meadow Version:")} {RainMeadow.MeadowVersionStr}", new Vector2((1336f - manager.rainWorld.screenSize.x) / 2f + 20f, manager.rainWorld.screenSize.y - 768f), new Vector2(200f, 20f), false, null);
             versionLabel.size = new Vector2(versionLabel.label.textRect.width, versionLabel.size.y);
             mainPage.subObjects.Add(versionLabel);
+            #endregion
 
-            // filters
-
+            #region left side (filters)
             Vector2 where = new(300f, 400f);
 
             var filterModeLabel = new ProperlyAlignedMenuLabel(this, mainPage, Translate("Lobby Mode"), where, new Vector2(200f, 20f), false);
@@ -152,8 +140,9 @@ namespace RainMeadow
             filterModsDropDown = new OpComboBox2(new Configurable<string>("Any"), where, 160f, requiredModsList) { colorEdge = MenuColorEffect.rgbWhite };
             filterModsDropDown.OnChange += UpdateLobbyFilter;
             new UIelementWrapper(this.tabWrapper, filterModsDropDown);
+            #endregion
 
-            //
+            #region right side
             where = new Vector2(manager.rainWorld.screenSize.x - 320f, 400f);
 
 
@@ -187,26 +176,12 @@ namespace RainMeadow
                 lobbyList.CreateCards();
                 RefreshLobbyList(null);
             };
-
-
-
-
             new UIelementWrapper(this.tabWrapper, domainDropDown);
+            #endregion
+
+            // new UIelementWrapper(this.tabWrapper, domainDropDown);
 
             CreateElementBindings();
-
-            // if (OnlineManager.currentlyJoiningLobby != default)
-            // {
-            //     ShowLoadingDialog("Joining lobby...");
-            // }
-
-            // // Lobby machine go!
-            MatchmakingManager.OnLobbyListReceived += OnlineManager_OnLobbyListReceived;
-            MatchmakingManager.OnLobbyJoined += OnlineManager_OnLobbyJoined;
-            if (MatchmakingManager.supported_matchmakers.Contains(MatchmakingManager.MatchMakingDomain.Steam))
-            {
-                SteamNetworkingUtils.InitRelayNetworkAccess();
-            }
 
             MatchmakingManager.currentInstance.RequestLobbyList();
             if (manager.musicPlayer != null)
